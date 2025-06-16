@@ -9,7 +9,7 @@ typedef struct
 	char word[MaxWordlen];
 	char def[MaxDeflen];
 }Dentry;
-//´óĞ¡Ğ´×ª»» 
+//å¤§å°å†™è½¬æ¢ 
 void toLowerCase(char* str)
 {
 	for(int i=0;str[i];i++)
@@ -18,30 +18,30 @@ void toLowerCase(char* str)
 	}
 }
 /*
-¶ÔÃ¿¸ö¶ÁÈ¡µÄµ¥´Ê:
-1.¸´ÖÆµ½currentWord
-2.×ª»»ÎªĞ¡Ğ´
-3.ÓëÄ¿±êµ¥´Ê±È½Ï(strcmp)
-4.Èç¹ûÆ¥Åä:
-¸´ÖÆ¶¨Òåµ½Êä³ö²ÎÊıdefinition
-ÉèÖÃfound=1
-Ìø³öÑ­»·
+å¯¹æ¯ä¸ªè¯»å–çš„å•è¯:
+1.å¤åˆ¶åˆ°currentWord
+2.è½¬æ¢ä¸ºå°å†™
+3.ä¸ç›®æ ‡å•è¯æ¯”è¾ƒ(strcmp)
+4.å¦‚æœåŒ¹é…:
+å¤åˆ¶å®šä¹‰åˆ°è¾“å‡ºå‚æ•°definition
+è®¾ç½®found=1
+è·³å‡ºå¾ªç¯
 */
-//²éÑ¯µ¥´Ê 
-int searchWord(const char*word, char* definition)//word:²éÕÒµÄµ¥´Ê£»definition:´æÕÒµ½µÄ¶¨Òå(»áÊä³ö) 
+//æŸ¥è¯¢å•è¯ 
+int searchWord(const char*word, char* definition)//word:æŸ¥æ‰¾çš„å•è¯ï¼›definition:å­˜æ‰¾åˆ°çš„å®šä¹‰(ä¼šè¾“å‡º) 
 {
     FILE *file = fopen("dictionary.txt", "rb");
     if (file == NULL) 
 	return 0;
 
-    Dentry entry;//´æ´ÓÎÄ¼ş¶ÁÈ¡µ½µÄµ¥´Ê´ÊÌõ 
-    int found = 0;//ÊÇ·ñÕÒµ½ 
+    Dentry entry;//å­˜ä»æ–‡ä»¶è¯»å–åˆ°çš„å•è¯è¯æ¡ 
+    int found = 0;//æ˜¯å¦æ‰¾åˆ° 
     char lowerWord[1024];
     strcpy(lowerWord, word);
     toLowerCase(lowerWord);
     
-    //±éÀúÎÄ¼ş²éÕÒµ¥´Ê 
-    while (fread(&entry, sizeof(Dentry), 1, file))//´ÓÎÄ¼ş¶ÁÈ¡Ò»¸öDentry½á¹¹Ìå 
+    //éå†æ–‡ä»¶æŸ¥æ‰¾å•è¯ 
+    while (fread(&entry, sizeof(Dentry), 1, file))//ä»æ–‡ä»¶è¯»å–ä¸€ä¸ªDentryç»“æ„ä½“ 
 	{
         char currentWord[1024];
         strcpy(currentWord, entry.word);
@@ -57,24 +57,24 @@ int searchWord(const char*word, char* definition)//word:²éÕÒµÄµ¥´Ê£»definition:´
     return found;
 }
 
-//¼Óµ¥´Ê 
-int addWord(const char*word, const char*definition)//ÒªÌí¼ÓµÄµ¥´ÊºÍµ¥´ÊµÄ¶¨Òå 
+//åŠ å•è¯ 
+int addWord(const char*word, const char*definition)//è¦æ·»åŠ çš„å•è¯å’Œå•è¯çš„å®šä¹‰ 
 {
-    FILE *file = fopen("dictionary.txt", "a");//´ò¿ª´ÊµäÎÄ¼ş²¢×·¼ÓĞ´Èë(¶ş½øÖÆÄ£Ê½±ÜÃâ×Ö·û×ª»»ÎÊÌâ) 
+    FILE *file = fopen("dictionary.txt", "a");//æ‰“å¼€è¯å…¸æ–‡ä»¶å¹¶è¿½åŠ å†™å…¥(äºŒè¿›åˆ¶æ¨¡å¼é¿å…å­—ç¬¦è½¬æ¢é—®é¢˜) 
     if (file == NULL) return 0;
 
     Dentry entry={0};
     strncpy(entry.word, word, MaxWordlen-1);
     strncpy(entry.def, definition, MaxDeflen-1);
     entry.word[MaxWordlen-1] = '\0';
-    entry.def[MaxDeflen-1] = '\0';//È·±£×Ö·û´®ÒÔ'\0'½áÊø 
+    entry.def[MaxDeflen-1] = '\0';//ç¡®ä¿å­—ç¬¦ä¸²ä»¥'\0'ç»“æŸ 
     
-    fwrite(&entry, sizeof(Dentry), 1, file);//½«ĞÂµ¥´ÊĞ´ÈëÎÄ¼ş 
+    fwrite(&entry, sizeof(Dentry), 1, file);//å°†æ–°å•è¯å†™å…¥æ–‡ä»¶ 
     fclose(file);
     return 1;
 }
 
-//ÁĞ³ö´ÊµäÖĞµÄËùÓĞµ¥´Ê
+//åˆ—å‡ºè¯å…¸ä¸­çš„æ‰€æœ‰å•è¯
 void listAllWords() 
 {
     FILE *file = fopen("dictionary.txt", "rb");
@@ -99,19 +99,19 @@ void listAllWords()
     
     fclose(file);
 }
-//É¾³ıµ¥´Ê 
+//åˆ é™¤å•è¯ 
 int deleteWord(const char *word) 
 {
     FILE *file = fopen("dictionary.txt", "rb");
     if (file == NULL) return 0;
-	//ÁÙÊ±ÎÄ¼ş 
+	//ä¸´æ—¶æ–‡ä»¶ 
     FILE *tempFile = fopen("temp.txt", "wb");
     if (tempFile == NULL) 
 	{
         fclose(file);
         return 0;
     }
-	//´¦Àí´óĞ¡Ğ´ 
+	//å¤„ç†å¤§å°å†™ 
     char lowerWord[MaxWordlen];
     strcpy(lowerWord, word);
     toLowerCase(lowerWord);
@@ -126,14 +126,14 @@ int deleteWord(const char *word)
         
         if (strcmp(currentWord, lowerWord) != 0) 
 		{
-			//²»ÊÇÒªÉ¾³ıµÄµ¥´ÊÔòĞ´ÈëÁÙÊ±ÎÄ¼ş 
+			//ä¸æ˜¯è¦åˆ é™¤çš„å•è¯åˆ™å†™å…¥ä¸´æ—¶æ–‡ä»¶ 
             fwrite(&entry, sizeof(Dentry), 1, tempFile);
         } else 
 		{
             deleted = 1;
         }
     }
-    //¹Ø±ÕÎÄ¼ş²¢Ìæ»» 
+    //å…³é—­æ–‡ä»¶å¹¶æ›¿æ¢ 
     fclose(file);
     fclose(tempFile);
     remove("dictionary.txt");
@@ -149,7 +149,7 @@ int main()
 	while(1)
 	{
 		printf("******************************\n");
-		printf("*---------ÔÚÏß´Êµä-----------*\n");
+		printf("*---------åœ¨çº¿è¯å…¸-----------*\n");
 		printf("******************************\n");
 		printf("*       1. Search Word       *\n");
 		printf("*       2. Add Word          *\n");
@@ -162,7 +162,7 @@ int main()
 		getchar();
 		
 		switch (choice) {
-            case 1: // ËÑË÷µ¥´Ê
+            case 1: // æœç´¢å•è¯
                 printf("Enter word to search: ");
                 fgets(word, MaxWordlen, stdin);
                 word[strcspn(word, "\n")] = '\0';
@@ -174,7 +174,7 @@ int main()
                 }
                 break;
                 
-            case 2: // Ìí¼Óµ¥´Ê
+            case 2: // æ·»åŠ å•è¯
                 printf("Enter word: ");
                 fgets(word, MaxWordlen, stdin);
                 word[strcspn(word, "\n")] = '\0';
@@ -189,7 +189,7 @@ int main()
                 }
                 break;
                 
-            case 3: // É¾³ıµ¥´Ê
+            case 3: // åˆ é™¤å•è¯
                 printf("Enter word to delete: ");
                 fgets(word, MaxWordlen, stdin);
                 word[strcspn(word, "\n")] = '\0';
@@ -201,11 +201,11 @@ int main()
                 }
                 break;
                 
-            case 4: // ÁĞ³öËùÓĞµ¥´Ê
+            case 4: // åˆ—å‡ºæ‰€æœ‰å•è¯
                 listAllWords();
                 break;
                 
-            case 5: // ÍË³ö
+            case 5: // é€€å‡º
                 printf("\nGoodbye!\n");
                 exit(0);
                 

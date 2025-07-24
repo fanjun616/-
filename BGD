@@ -1,0 +1,100 @@
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+import matplotlib.pyplot as plt
+from matplotlib_inline import backend_inline
+
+from DNN.DNN_model import loss_fn
+from GCN import optimizer, model
+
+backend_inline.set_matplotlib_formats('svg')
+#准备数据集
+df = pd.read_csv('Data.csv',index_col=0)
+arr = df.values                 #pandas对象退化为numpy数组
+arr = arr.astype(np.float32)
+ts = torch.tensor(arr)          #数组转为张量
+ts = ts.to('cuda')              #把训练集搬到cuda上
+
+
+#划分训练集与测试集
+train_size = int(len(ts) * 0.7)
+test_size = len(ts) - train_size
+ts = ts[torch.randperm(ts.size(0)), : ]
+train_Data = ts[:train_size, : ]
+test_Data = ts[train_size:,: ]
+
+
+#搭建神经网络
+class DNN(nn.Module):
+    def __init__(self):
+        '''搭建神经网络各层'''
+        super(DNN,self).__init__()
+        self.net = nn.Sequential(   #按照顺序搭建各层
+            nn.Linear(8,32),nn.Sigmoid(),  #第一层：全连接层
+            nn.Linear(32, 8),nn.ReLU(),
+            nn.Linear(8, 4),nn.Sigmoid(),
+            nn.Linear(4,1),nn.Sigmoid(),
+    )
+    def forward(self, x ):
+        '''前向传播'''
+        y = self.net(x) #x即输入数据
+        return y        #y即输出数据
+
+model = DNN().to('cuda')
+
+#损失函数
+loss_fn = nn.BCELoss(reduction='mean')
+#优化算法选择
+learning_rate = 0.005
+optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
+
+
+#训练网络
+epochs = 5000
+losses = []  # 记录损失函数变化的列表
+# 给训练集划分输入与输出
+X = train_Data[:, :-1]                  #前八列为输入特征
+Y = train_Data[:,-1].reshape((-1,1))    #后1列为输出特征，将向量变成列矩阵
+
+for epoch in range(epochs):
+    Pred = model(X)  # 一次前向传播(批量)
+    loss = loss_fn(Pred, Y)  # 计算损失函数
+    losses.append(loss.item())  # 记录损失函数的变化(把损失函数通过.item降级为1个python普通元素)
+    optimizer.zero_grad()  # 清理上一轮滞留的梯度
+    loss.backward()  # 一次反向传播
+    optimizer.step()  # 优化内部参数
+
+Fig = plt.figure()
+plt.plot(range(epochs), losses)
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.show()
+
+
+#测试网络
+# 给测试集划分输入与输出
+X = test_Data[:, :3]
+Y = test_Data[:, -3:]
+with torch.no_grad():
+    Pred = model(X)
+    Pred[:, torch.argmax(Pred, axis=1)] = 1
+    Pred[Pred != 1] = 0
+    correct = torch.sum((Pred == Y).all(1))  # 预测正确的样本
+    total = Y.size(0)  # 全部的样本数量
+    print(f'测试集精确度: {100 * correct / total}%')
+
+# 保存和导入网络
+torch.save(model, 'model.pth')
+new_model = torch.load('model.pth')
+
+# 用新网络跑测试集
+X = test_Data[:, :-1]       #前八列为输入特征
+Y = test_Data[:, -1 ].reshape((-1,1))       #后1列为输出特征
+with torch.no_grad():
+    Pred = new_model(X)
+    Pred[Pred>0.5] = 1
+    Pred[Pred<0.5] = 0
+    correct = torch.sum((Pred == Y).all(1))  # 预测正确的样本
+    total = Y.size(0)  # 全部的样本数量
+    print(f'测试集精确度: {100 * correct / total}%')

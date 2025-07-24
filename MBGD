@@ -1,0 +1,96 @@
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+from torch.utils.data import random_split
+import matplotlib.pyplot as plt
+from matplotlib_inline import backend_inline
+
+from DNN.BGD import learning_rate
+from DNN.DNN_model import train_size, test_size, train_Data, test_Data, loss_fn
+
+backend_inline.set_matplotlib_formats('svg')
+
+#制作数据集
+class MyData(Dataset):
+    def __init__(self,filepath):
+        df = pd.read_csv(filepath,index_col=0)
+        arr = df.values  # pandas对象退化为numpy数组
+        arr = arr.astype(np.float32)
+        ts = torch.tensor(arr)  # 数组转为张量
+        ts = ts.to('cuda')  # 把训练集搬到cuda上
+        self.X = ts[:,:-1]                  #前8列为输入特征
+        self.Y = ts[:,-1].reshape((-1,1))   #后1列为输出特征
+        self.len = ts.shape[0]              #样本总数
+
+    def __getitem__(self, index):
+        return self.X[index],   self.Y[index]
+
+    def __len__(self):
+        return self.len
+
+#划分训练集与测试集
+Data = MyData('Data.csv')
+train_size = int(len(Data) * 0.7)
+test_size = len(Data) - train_size
+train_Data,test_Data = random_split(Data,[train_size,test_size])
+
+#批次加载器
+train_loader = DataLoader(dataset=train_Data,shuffle=True,batch_size=128)
+test_loader = DataLoader(dataset=test_Data,shuffle=False,batch_size=64)
+
+
+#搭建神经网络
+class DNN(nn.Module):
+    def __init__(self):
+        '''搭建神经网络各层'''
+        super(DNN,self).__init__()
+        self.net = nn.Sequential(   #按照顺序搭建各层
+            nn.Linear(8,32),nn.Sigmoid(),   #第一层：全连接层
+            nn.Linear(32, 8), nn.Sigmoid(),
+            nn.Linear(8, 4), nn.Sigmoid(),
+            nn.Linear(4, 1),nn.Sigmoid()
+    )
+    def forward(self, x ):
+        '''前向传播'''
+        y = self.net(x) #x即输入数据
+        return y        #y即输出数据
+
+model = DNN().to('cuda')
+
+#训练网络
+loss_fn = nn.BCELoss(reduction='mean')
+learning_rate = 0.005
+optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
+
+epochs = 500
+losses = []
+
+for epoch in range(epochs):
+    for (x,y) in train_loader:
+        Pred = model(x)                 #一次前向传播(BGD)
+        loss = loss_fn(Pred, y)         #计算损失函数
+        losses.append(loss.item())      #记录损失函数的变化(把损失函数通过.item降级为1个python普通元素)
+        optimizer.zero_grad()           #清理上一轮滞留的梯度
+        loss.backward()                 #一次反向传播
+        optimizer.step()                #优化内部参数
+
+Fig = plt.figure()
+plt.plot(range(len(losses)),losses)
+plt.show()
+
+
+#测试网络
+correct = 0
+total = 0
+
+with torch.no_grad():
+    for (x,y) in test_loader:   #获取小批次的x和y
+        Pred = model(x)
+        Pred[Pred>=0.5] = 1
+        Pred[Pred<0.5] = 0
+        correct += torch.sum( (Pred == y).all(1) )
+        total += y.size(0)#预测正确的样本
+print(f'测试集精确度: {100*correct/total}%')
